@@ -1696,7 +1696,7 @@ where
                 buffer
                     .add(dec_exp as usize + 1)
                     .cast::<u16>()
-                    .write_unaligned(u16::from_ne_bytes([b'.', b'0']));
+                    .write_unaligned(u16::from_ne_bytes(*b".0"));
                 buffer.add(dec_exp as usize + 3)
             }
         } else {
