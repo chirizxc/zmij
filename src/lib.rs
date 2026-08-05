@@ -1641,65 +1641,81 @@ where
 
     if Float::FIXED_DEC_EXP.contains(&dec_exp) {
         let extra = usize::from(has_extra_digit);
-        unsafe {
-            return if dec_exp < 0 {
-                // 1234e-6 -> 0.00123
-                let base = (1 - dec_exp) as usize;
+
+        return if dec_exp < 0 {
+            // 1234e-6 -> 0.00123
+            let base = (1 - dec_exp) as usize;
+            unsafe {
                 buffer.cast::<u64>().write_unaligned(ZEROS);
                 buffer
                     .add(base - 1 + extra)
                     .cast::<Float::DecDigitsType>()
                     .write_unaligned(dig.digits);
-                if has_last_digit {
+            };
+
+            if has_last_digit {
+                unsafe {
                     buffer
                         .add(base - 1 + extra + bcd_size)
-                        .write(b'0' + dec.last_digit);
-                }
+                        .write(b'0' + dec.last_digit)
+                };
+            }
+            unsafe {
                 *buffer.add(1) = b'.';
                 buffer.add(base + length)
-            } else if length as i32 - 1 <= dec_exp {
-                // 1234e7 -> 12340000000.0
+            }
+        } else if length as i32 - 1 <= dec_exp {
+            // 1234e7 -> 12340000000.0
+            unsafe {
                 buffer
                     .cast::<Float::DecDigitsType>()
-                    .write_unaligned(dig.digits);
-                if has_last_digit {
-                    buffer.add(bcd_size).write(b'0' + dec.last_digit);
-                }
-                if extra == 0 {
-                    copy_exact_left_by_1(buffer, length.max(1));
-                }
-                let fill_from = length.max(1);
-                // Skip the fill when there are no zeros: for negative values
-                // only 23 buffer bytes are left and the store at offset 16
-                // would overshoot the allocation.
-                if dec_exp as usize + 1 > fill_from {
-                    buffer.add(fill_from).cast::<u64>().write_unaligned(ZEROS);
-                    if dec_exp as usize + 1 > fill_from + 8 {
+                    .write_unaligned(dig.digits)
+            };
+            if has_last_digit {
+                unsafe { buffer.add(bcd_size).write(b'0' + dec.last_digit) };
+            }
+            if extra == 0 {
+                unsafe { copy_exact_left_by_1(buffer, length.max(1)) };
+            }
+            let fill_from = length.max(1);
+            // Skip the fill when there are no zeros: for negative values
+            // only 23 buffer bytes are left and the store at offset 16
+            // would overshoot the allocation.
+            if dec_exp as usize + 1 > fill_from {
+                unsafe { buffer.add(fill_from).cast::<u64>().write_unaligned(ZEROS) };
+                if dec_exp as usize + 1 > fill_from + 8 {
+                    unsafe {
                         buffer
                             .add(dec_exp as usize + 1 - 8)
                             .cast::<u64>()
-                            .write_unaligned(ZEROS);
-                    }
+                            .write_unaligned(ZEROS)
+                    };
                 }
+            }
+            unsafe {
                 buffer
                     .add(dec_exp as usize + 1)
                     .cast::<u16>()
                     .write_unaligned(u16::from_ne_bytes([b'.', b'0']));
                 buffer.add(dec_exp as usize + 3)
-            } else {
-                // 1234e-2 -> 12.34
+            }
+        } else {
+            // 1234e-2 -> 12.34
+            unsafe {
                 buffer
                     .add(extra)
                     .cast::<Float::DecDigitsType>()
-                    .write_unaligned(dig.digits);
-                if has_last_digit {
-                    buffer.add(extra + bcd_size).write(b'0' + dec.last_digit);
-                }
+                    .write_unaligned(dig.digits)
+            };
+            if has_last_digit {
+                unsafe { buffer.add(extra + bcd_size).write(b'0' + dec.last_digit) };
+            }
+            unsafe {
                 copy_exact_left_by_1(buffer, dec_exp as usize + 1);
                 *buffer.add(dec_exp as usize + 1) = b'.';
                 buffer.add(length + 1)
-            };
-        }
+            }
+        };
     }
 
     unsafe {
