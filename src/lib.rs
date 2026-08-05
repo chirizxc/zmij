@@ -1503,29 +1503,31 @@ where
     }
 }
 
+/// Copies `count` bytes starting at `src.add(1)` to `src`, shifting left by 1.
 #[cfg_attr(feature = "no-panic", no_panic)]
 #[inline]
 unsafe fn copy_exact_left_by_1(src: *mut u8, count: usize) {
     debug_assert!((1..=16).contains(&count));
-    unsafe {
-        if count >= 8 {
-            let a = src.add(1).cast::<u64>().read_unaligned();
-            let b = src.add(count - 7).cast::<u64>().read_unaligned();
-            src.cast::<u64>().write_unaligned(a);
-            src.add(count - 8).cast::<u64>().write_unaligned(b);
-        } else if count >= 4 {
-            let a = src.add(1).cast::<u32>().read_unaligned();
-            let b = src.add(count - 3).cast::<u32>().read_unaligned();
-            src.cast::<u32>().write_unaligned(a);
-            src.add(count - 4).cast::<u32>().write_unaligned(b);
-        } else if count >= 2 {
-            let a = src.add(1).cast::<u16>().read_unaligned();
-            let b = src.add(count - 1).cast::<u16>().read_unaligned();
-            src.cast::<u16>().write_unaligned(a);
-            src.add(count - 2).cast::<u16>().write_unaligned(b);
-        } else {
-            *src = *src.add(1);
-        }
+
+    macro_rules! shift {
+        ($ty:ty, $tail:expr) => {{
+            unsafe {
+                let a = src.add(1).cast::<$ty>().read_unaligned();
+                let b = src.add(count - ($tail - 1)).cast::<$ty>().read_unaligned();
+                src.cast::<$ty>().write_unaligned(a);
+                src.add(count - $tail).cast::<$ty>().write_unaligned(b);
+            }
+        }};
+    }
+
+    if count >= 8 {
+        shift!(u64, 8);
+    } else if count >= 4 {
+        shift!(u32, 4);
+    } else if count >= 2 {
+        shift!(u16, 2);
+    } else {
+        unsafe { *src = *src.add(1) };
     }
 }
 
