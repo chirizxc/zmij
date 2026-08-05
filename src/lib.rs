@@ -1696,7 +1696,7 @@ where
                 copy_exact_left_by_1(buffer, dec_exp as usize + 1);
                 *buffer.add(dec_exp as usize + 1) = b'.';
                 buffer.add(length + 1)
-            }
+            };
         }
     }
 
