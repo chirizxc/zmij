@@ -1667,12 +1667,17 @@ where
                     copy_exact_left_by_1(buffer, length.max(1));
                 }
                 let fill_from = length.max(1);
-                buffer.add(fill_from).cast::<u64>().write_unaligned(ZEROS);
-                if dec_exp as usize + 1 > fill_from + 8 {
-                    buffer
-                        .add(dec_exp as usize + 1 - 8)
-                        .cast::<u64>()
-                        .write_unaligned(ZEROS);
+                // Skip the fill when there are no zeros: for negative values
+                // only 23 buffer bytes are left and the store at offset 16
+                // would overshoot the allocation.
+                if dec_exp as usize + 1 > fill_from {
+                    buffer.add(fill_from).cast::<u64>().write_unaligned(ZEROS);
+                    if dec_exp as usize + 1 > fill_from + 8 {
+                        buffer
+                            .add(dec_exp as usize + 1 - 8)
+                            .cast::<u64>()
+                            .write_unaligned(ZEROS);
+                    }
                 }
                 buffer
                     .add(dec_exp as usize + 1)
